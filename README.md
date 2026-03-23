@@ -40,7 +40,7 @@ External API → Kafka Producer → Kafka Topic → Spark Consumer → PostgreSQ
 ## Project Structure
 
 ```
-├── airflow_resources/       # DAGs and Airflow configuration
+├── airflow/                 # DAGs and Airflow configuration
 ├── data/                    # Sample/reference data
 ├── scripts/                 # Utility and setup scripts
 ├── spark/                   # Spark job for consuming Kafka and writing to Postgres
