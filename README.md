@@ -1,17 +1,102 @@
-# Building a simple End-to-End Data Engineering System 
-This project uses different tools such as kafka, airflow, spark, postgres and docker. 
+# Containerized Data Pipeline: Real-Time API Streaming with Kafka, Spark, Airflow & PostgreSQL
 
-A step by step guide to run this pipeline: https://medium.com/@hamzagharbi_19502/end-to-end-data-engineering-system-on-real-data-with-kafka-spark-airflow-postgres-and-docker-a70e18df4090
+Dockerized pipeline that ingests API data via Kafka, transforms it with Spark, stores it in PostgreSQL, and schedules everything through Airflow.
 
-## Overview
+---
 
-1. Data Streaming: Initially, data is streamed from the API into a Kafka topic.
-  
-2. Data Processing: A Spark job then takes over, consuming the data from the Kafka topic and transferring it to a PostgreSQL database.
-   
-3. Scheduling with Airflow: Both the streaming task and the Spark job are orchestrated using Airflow. While in a real-world scenario, the Kafka producer would constantly listen to the API, for demonstration purposes, we'll schedule the Kafka streaming task to run daily. Once the streaming is complete, the Spark job processes the data, making it ready for use by the LLM application.
+## What This Project Does
 
-All of these tools will be built and run using docker, and more specifically docker-compose.
+This pipeline pulls random user data from an external API, pushes it through a message queue, processes it, and lands it in a relational database — all automated and containerized.
 
-![chatuml-diagram](https://github.com/HamzaG737/data-engineering-project/assets/71135893/ce92b731-038a-4d9c-9722-f97a6ba51153)
+Here's how data flows through the system:
 
+```
+External API → Kafka Producer → Kafka Topic → Spark Consumer → PostgreSQL
+                                      ↑
+                              Airflow (schedules everything)
+```
+
+**In plain English:**
+1. A Python script hits the [Random User API](https://randomuser.me/) and streams the response into a Kafka topic
+2. A Spark job picks up messages from that Kafka topic, cleans/structures the data, and writes it to PostgreSQL
+3. Airflow ties both steps together — it triggers the streaming first, waits for it to finish, then kicks off the Spark job
+4. Everything runs inside Docker containers, so there's nothing to install manually
+
+---
+
+## Tech Stack
+
+| Tool | Role |
+|------|------|
+| **Apache Kafka** | Message broker — buffers data between ingestion and processing |
+| **Apache Spark** | Distributed processing — reads from Kafka, transforms, writes to Postgres |
+| **Apache Airflow** | Workflow orchestration — schedules and monitors the pipeline |
+| **PostgreSQL** | Storage — final destination for processed data |
+| **Docker & Docker Compose** | Containerization — runs the entire stack with one command |
+| **Python** | Glue code — Kafka producer, Spark jobs, Airflow DAGs |
+
+---
+
+## Project Structure
+
+```
+├── airflow/       # DAGs and Airflow configuration
+├── data/                    # Sample/reference data
+├── scripts/                 # Utility and setup scripts
+├── spark/                   # Spark job for consuming Kafka and writing to Postgres
+├── src/                     # Kafka producer and constants
+├── docker-compose.yml       # Main services (Kafka, Spark, Postgres)
+├── docker-compose-airflow.yaml  # Airflow services
+└── requirements.txt         # Python dependencies
+```
+
+---
+
+## How to Run
+
+### Prerequisites
+- Docker and Docker Compose installed on your machine
+
+### Steps
+
+**1. Start the core services (Kafka, Spark, PostgreSQL):**
+```bash
+docker-compose up -d
+```
+
+**2. Start Airflow:**
+```bash
+docker-compose -f docker-compose-airflow.yaml up -d
+```
+
+**3. Access Airflow UI:**
+Open `http://localhost:8080` in your browser and trigger the DAG.
+
+---
+
+## Architecture Decisions
+
+**Why Kafka instead of hitting the API directly from Spark?**
+Kafka decouples ingestion from processing. If Spark goes down, messages queue up in Kafka instead of being lost. In production, this pattern handles backpressure and allows multiple consumers.
+
+**Why Airflow instead of a cron job?**
+Airflow gives you dependency management between tasks, retry logic, and a UI to monitor pipeline health. A cron job can trigger things, but it can't say "only run Spark after Kafka finishes successfully."
+
+**Why Docker Compose?**
+Five services with specific version requirements and network configurations — Docker Compose makes this reproducible across any machine with a single command.
+
+---
+
+## What I'd Improve
+
+- [ ] Add data validation/quality checks between Kafka and Spark
+- [ ] Set up a monitoring dashboard (Grafana) for pipeline metrics
+- [ ] Add error handling and dead letter queue for failed messages
+- [ ] Implement schema registry for Kafka to enforce data contracts
+- [ ] Add unit tests for the Spark transformations
+
+---
+
+## Acknowledgments
+
+Inspired by [HamzaG737's data engineering project](https://github.com/HamzaG737/data-engineering-project). Built upon and modified for learning purposes.
